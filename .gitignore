@@ -1,0 +1,39 @@
+# Build outputs
+**/bin/
+**/obj/
+**/Debug/
+**/Release/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# Rider
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+
+# Local settings
+*.env
+*.env.*
+
+# Publish artifacts
+publish/
+installer/dist/
+
+# Local tooling
+SnipTool/claude-code-imagegen-skill-main/

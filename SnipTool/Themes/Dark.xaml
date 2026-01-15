@@ -1,0 +1,34 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Color x:Key="AppBackgroundColor">#0F1724</Color>
+    <Color x:Key="SurfaceBackgroundColor">#141F2F</Color>
+    <Color x:Key="AppTextColor">#E6EEF9</Color>
+    <Color x:Key="AppMutedTextColor">#9FB2CC</Color>
+    <Color x:Key="AppBorderColor">#233145</Color>
+    <Color x:Key="AccentColor">#4DA3FF</Color>
+    <Color x:Key="AccentDarkColor">#2B7FD8</Color>
+    <Color x:Key="InputBackgroundColor">#162236</Color>
+    <Color x:Key="ToggleTrackColor">#2A3A55</Color>
+    <Color x:Key="ToggleThumbColor">#E6EEF9</Color>
+    <Color x:Key="ToastBackgroundColor">#162236</Color>
+    <Color x:Key="ToastButtonBackgroundColor">#1D2A40</Color>
+    <Color x:Key="ToastButtonBorderColor">#2A3A55</Color>
+    <Color x:Key="OverlayBackgroundColor">#60101824</Color>
+    <Color x:Key="SelectionFillColor">#30FFFFFF</Color>
+
+    <SolidColorBrush x:Key="AppBackground" Color="{DynamicResource AppBackgroundColor}" />
+    <SolidColorBrush x:Key="SurfaceBackground" Color="{DynamicResource SurfaceBackgroundColor}" />
+    <SolidColorBrush x:Key="AppText" Color="{DynamicResource AppTextColor}" />
+    <SolidColorBrush x:Key="AppMutedText" Color="{DynamicResource AppMutedTextColor}" />
+    <SolidColorBrush x:Key="AppBorder" Color="{DynamicResource AppBorderColor}" />
+    <SolidColorBrush x:Key="Accent" Color="{DynamicResource AccentColor}" />
+    <SolidColorBrush x:Key="AccentDark" Color="{DynamicResource AccentDarkColor}" />
+    <SolidColorBrush x:Key="InputBackground" Color="{DynamicResource InputBackgroundColor}" />
+    <SolidColorBrush x:Key="ToggleTrack" Color="{DynamicResource ToggleTrackColor}" />
+    <SolidColorBrush x:Key="ToggleThumb" Color="{DynamicResource ToggleThumbColor}" />
+    <SolidColorBrush x:Key="ToastBackground" Color="{DynamicResource ToastBackgroundColor}" />
+    <SolidColorBrush x:Key="ToastButtonBackground" Color="{DynamicResource ToastButtonBackgroundColor}" />
+    <SolidColorBrush x:Key="ToastButtonBorder" Color="{DynamicResource ToastButtonBorderColor}" />
+    <SolidColorBrush x:Key="OverlayBackground" Color="{DynamicResource OverlayBackgroundColor}" />
+    <SolidColorBrush x:Key="SelectionFill" Color="{DynamicResource SelectionFillColor}" />
+</ResourceDictionary>
