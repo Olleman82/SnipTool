@@ -12,7 +12,11 @@ public enum HotkeyAction
     Rectangle,
     Window,
     Fullscreen,
-    CopyLast
+    CopyLast,
+    VideoRegion,
+    VideoWindow,
+    VideoFullscreen,
+    VideoStop
 }
 
 public sealed class HotkeyManager : IDisposable
@@ -36,6 +40,10 @@ public sealed class HotkeyManager : IDisposable
         Register(settings.Hotkeys.Window, HotkeyAction.Window);
         Register(settings.Hotkeys.Fullscreen, HotkeyAction.Fullscreen);
         Register(settings.Hotkeys.CopyLast, HotkeyAction.CopyLast);
+        Register(settings.Hotkeys.VideoRegion, HotkeyAction.VideoRegion);
+        Register(settings.Hotkeys.VideoWindow, HotkeyAction.VideoWindow);
+        Register(settings.Hotkeys.VideoFullscreen, HotkeyAction.VideoFullscreen);
+        Register(settings.Hotkeys.VideoStop, HotkeyAction.VideoStop);
     }
 
     public void UnregisterAll()

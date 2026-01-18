@@ -2,8 +2,10 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Threading;
 using Forms = System.Windows.Forms;
 using System.Windows.Interop;
 using SnipTool.Models;
@@ -19,11 +21,22 @@ public partial class App : System.Windows.Application
     private SessionManager? _sessionManager;
     private CaptureService? _captureService;
     private HotkeyManager? _hotkeyManager;
+    private VideoCaptureService? _videoCaptureService;
     private Forms.NotifyIcon? _trayIcon;
     private MainWindow? _settingsWindow;
     private OverlayWindow? _overlay;
+    private UI.BurstHudWindow? _burstHud;
+    private UI.LibraryWindow? _libraryWindow;
+    private UI.VideoCaptureWindow? _videoWindow;
+    private UI.VideoHudWindow? _videoHud;
+    private DispatcherTimer? _videoHudTimer;
+    private Forms.ToolStripMenuItem? _startVideoItem;
+    private Forms.ToolStripMenuItem? _stopVideoItem;
     private bool _isCapturing;
+    private Rectangle? _lastRect;
     private LogService? _log;
+    private bool _isVideoSelecting;
+    private bool _pendingVideoAudio;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -32,7 +45,9 @@ public partial class App : System.Windows.Application
         _settingsService = new SettingsService();
         _settings = _settingsService.Load();
         _log = new LogService();
-        _log.Info("App starting");
+        var assembly = Assembly.GetExecutingAssembly();
+        var buildTime = File.GetLastWriteTime(assembly.Location);
+        _log.Info($"App starting | {assembly.GetName().Version} | {buildTime:yyyy-MM-dd HH:mm:ss}");
 
         _settings.SaveRootPath = @"D:\Screenshots";
         _settingsService.Save(_settings);
@@ -41,9 +56,30 @@ public partial class App : System.Windows.Application
 
         _sessionManager = new SessionManager(_settings);
         _captureService = new CaptureService();
+        _videoCaptureService = new VideoCaptureService(_log);
+        _videoCaptureService.RecordingStateChanged += isRecording =>
+        Dispatcher.Invoke(() => OnVideoRecordingStateChanged(isRecording));
+        _videoCaptureService.StatusChanged += status =>
+            Dispatcher.Invoke(() => OnVideoStatusChanged(status));
+        _videoCaptureService.RecordingFailed += message =>
+            Dispatcher.Invoke(() => ShowToast($"Recording failed: {message}"));
+        _videoCaptureService.RecordingCompleted += path =>
+            Dispatcher.Invoke(() =>
+            {
+                if (!string.IsNullOrWhiteSpace(path))
+                {
+                    ShowToast($"Saved video: {System.IO.Path.GetFileName(path)}");
+                    _sessionManager?.RegisterSavedFile(path);
+                    _libraryWindow?.RefreshLibrary();
+                }
+            });
         _overlay = new OverlayWindow();
         _overlay.SelectionCompleted += OnSelectionCompleted;
-        _overlay.SelectionCanceled += () => _isCapturing = false;
+        _overlay.SelectionCanceled += () =>
+        {
+            _isCapturing = false;
+            _isVideoSelecting = false;
+        };
 
         DispatcherUnhandledException += (_, args) =>
         {
@@ -60,7 +96,8 @@ public partial class App : System.Windows.Application
         _hotkeyManager.HotkeyPressed += HandleHotkey;
         _hotkeyManager.RegisterFromSettings(_settings);
 
-        _settingsWindow = new MainWindow(_settings, SaveSettings);
+        _settingsWindow = new MainWindow(_settings, SaveSettings, GetBurstStatus, StartNewBurst, EndBurst);
+        MainWindow = _settingsWindow;
         _settingsWindow.Hide();
 
         SetupTrayIcon();
@@ -76,23 +113,74 @@ public partial class App : System.Windows.Application
         };
 
         var menu = new Forms.ContextMenuStrip();
-        menu.Items.Add("New burst", null, (_, _) => _sessionManager?.StartNewSession());
+        menu.Items.Add("New burst", null, (_, _) => StartNewBurst());
+        menu.Items.Add("End burst", null, (_, _) => EndBurst());
+        menu.Items.Add("Copy last to clipboard", null, (_, _) => CopyLastToClipboard());
         menu.Items.Add("Open last folder", null, (_, _) => OpenFolder(_sessionManager?.GetLastFolder()));
+        menu.Items.Add("Library", null, (_, _) => ShowLibrary());
+        _startVideoItem = new Forms.ToolStripMenuItem("Start video recording", null, (_, _) => StartVideoRecording(_settings?.VideoIncludeAudio ?? false));
+        _stopVideoItem = new Forms.ToolStripMenuItem("Stop video recording", null, (_, _) => StopVideoRecording());
+        menu.Items.Add(_startVideoItem);
+        menu.Items.Add(_stopVideoItem);
+        menu.Items.Add("Video capture...", null, (_, _) => ShowVideoCapture());
         menu.Items.Add("Settings", null, (_, _) => ShowSettings());
         menu.Items.Add("Quit", null, (_, _) => Shutdown());
 
         _trayIcon.ContextMenuStrip = menu;
         _trayIcon.DoubleClick += (_, _) => ShowSettings();
+        UpdateVideoMenuState();
     }
 
     public void ApplyTheme(bool darkMode)
     {
+        IsDarkMode = darkMode;
         var dictionaries = Resources.MergedDictionaries;
         dictionaries.Clear();
         dictionaries.Add(new ResourceDictionary
         {
             Source = new Uri(darkMode ? "Themes/Dark.xaml" : "Themes/Light.xaml", UriKind.Relative)
         });
+        if (_settingsWindow != null)
+        {
+            WindowThemeHelper.Apply(_settingsWindow, darkMode);
+        }
+    }
+
+    public bool IsDarkMode { get; private set; }
+
+    public BurstStatus GetBurstStatus()
+    {
+        if (_sessionManager == null)
+        {
+            return new BurstStatus(false, DateTime.Now, null, 0);
+        }
+
+        return new BurstStatus(_sessionManager.IsActive, _sessionManager.SessionStart, _sessionManager.SessionFolder, _sessionManager.Counter);
+    }
+
+    public void StartNewBurst()
+    {
+        _sessionManager?.StartNewSession();
+        UpdateBurstHud();
+        _settingsWindow?.RefreshBurstStatus();
+    }
+
+    public void EndBurst()
+    {
+        _sessionManager?.EndSession();
+        UpdateBurstHud();
+        _settingsWindow?.RefreshBurstStatus();
+    }
+
+    private void UpdateBurstHud()
+    {
+        if (_sessionManager == null)
+        {
+            return;
+        }
+
+        _burstHud ??= new UI.BurstHudWindow();
+        _burstHud.UpdateStatus(new BurstStatus(_sessionManager.IsActive, _sessionManager.SessionStart, _sessionManager.SessionFolder, _sessionManager.Counter));
     }
 
     private static Icon LoadTrayIcon()
@@ -118,11 +206,254 @@ public partial class App : System.Windows.Application
     {
         if (_settingsWindow == null)
         {
-            return;
+            _settingsWindow = new MainWindow(_settings ?? new AppSettings(), SaveSettings, GetBurstStatus, StartNewBurst, EndBurst);
+            _settingsWindow.Hide();
         }
 
         _settingsWindow.Show();
         _settingsWindow.Activate();
+        WindowThemeHelper.Apply(_settingsWindow, IsDarkMode);
+    }
+
+    public void ShowLibrary()
+    {
+        if (_settings == null)
+        {
+            return;
+        }
+
+        if (_libraryWindow != null)
+        {
+            _libraryWindow.Activate();
+            return;
+        }
+
+        _libraryWindow = new UI.LibraryWindow(_settings)
+        {
+            Owner = _settingsWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+        _libraryWindow.Closed += (_, _) => _libraryWindow = null;
+        WindowThemeHelper.Apply(_libraryWindow, IsDarkMode);
+        _libraryWindow.ShowDialog();
+    }
+
+    public void ShowVideoCapture()
+    {
+        if (_videoCaptureService == null)
+        {
+            return;
+        }
+
+        if (_videoWindow != null)
+        {
+            _videoWindow.Activate();
+            return;
+        }
+
+        _videoWindow = new UI.VideoCaptureWindow(this, _videoCaptureService)
+        {
+            Owner = _settingsWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+        _videoWindow.Closed += (_, _) => _videoWindow = null;
+        WindowThemeHelper.Apply(_videoWindow, IsDarkMode);
+        _videoWindow.Show();
+    }
+
+    public bool VideoIncludeAudioDefault => _settings?.VideoIncludeAudio == true;
+
+    public void StartVideoRecording(bool includeAudio)
+    {
+        if (_videoCaptureService == null || _sessionManager == null)
+        {
+            return;
+        }
+
+        EnsureVideoWindowVisible();
+        StartVideoHud();
+        var path = _sessionManager.GetNextFilePath(".mp4");
+        var started = _videoCaptureService.StartFullscreenRecording(path, includeAudio);
+        if (started)
+        {
+            ShowToast($"Recording started: {System.IO.Path.GetFileName(path)}");
+        }
+        else
+        {
+            ShowToast("Recording failed to start");
+        }
+    }
+
+    public void StartVideoWindowRecording(bool includeAudio)
+    {
+        if (_videoCaptureService == null || _sessionManager == null)
+        {
+            return;
+        }
+
+        EnsureVideoWindowVisible();
+        StartVideoHud();
+        var hwnd = GetForegroundWindow();
+        if (hwnd == IntPtr.Zero)
+        {
+            ShowToast("No active window to record");
+            return;
+        }
+
+        var path = _sessionManager.GetNextFilePath(".mp4");
+        var started = _videoCaptureService.StartWindowRecording(hwnd, path, includeAudio);
+        if (started)
+        {
+            ShowToast($"Recording started: {System.IO.Path.GetFileName(path)}");
+        }
+        else
+        {
+            ShowToast("Recording failed to start");
+        }
+    }
+
+    public void BeginVideoRegionCapture(bool includeAudio)
+    {
+        if (_overlay == null || _videoCaptureService == null)
+        {
+            return;
+        }
+
+        if (_videoCaptureService.IsRecording)
+        {
+            ShowToast("Recording already in progress");
+            return;
+        }
+
+        EnsureVideoWindowVisible();
+        StartVideoHud();
+        _pendingVideoAudio = includeAudio;
+        _isVideoSelecting = true;
+        _isCapturing = true;
+        _overlay.PrepareAndShow();
+    }
+
+    public void StopVideoRecording()
+    {
+        _videoCaptureService?.StopRecording();
+        UpdateVideoHud();
+    }
+
+    public void PauseVideoRecording()
+    {
+        _videoCaptureService?.Pause();
+        UpdateVideoHud();
+    }
+
+    public void ResumeVideoRecording()
+    {
+        _videoCaptureService?.Resume();
+        UpdateVideoHud();
+    }
+
+    private void EnsureVideoWindowVisible()
+    {
+        if (_videoCaptureService == null)
+        {
+            return;
+        }
+
+        if (_videoWindow == null)
+        {
+            _videoWindow = new UI.VideoCaptureWindow(this, _videoCaptureService)
+            {
+                Owner = _settingsWindow,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+            _videoWindow.Closed += (_, _) => _videoWindow = null;
+            WindowThemeHelper.Apply(_videoWindow, IsDarkMode);
+            _videoWindow.Show();
+            return;
+        }
+
+        _videoWindow.Show();
+        _videoWindow.Activate();
+    }
+
+    private void StartVideoHud()
+    {
+        EnsureVideoHud();
+        if (_videoHud == null)
+        {
+            return;
+        }
+
+        // CRITICAL: Must create and start timer on VideoHud's Dispatcher thread
+        _videoHud.Dispatcher.Invoke(() =>
+        {
+            if (_videoHudTimer == null || _videoHudTimer.Dispatcher != _videoHud.Dispatcher)
+            {
+                _videoHudTimer = new DispatcherTimer(DispatcherPriority.Render, _videoHud.Dispatcher)
+                {
+                    Interval = TimeSpan.FromMilliseconds(100)
+                };
+                _videoHudTimer.Tick += OnVideoHudTick;
+            }
+            _log?.Info($"Starting HUD timer: IsEnabled={_videoHudTimer.IsEnabled}");
+            _videoHudTimer.Start();
+            _log?.Info($"HUD timer started: IsEnabled={_videoHudTimer.IsEnabled}");
+        });
+        
+        UpdateVideoHud();
+    }
+
+    private void EnsureVideoHud()
+    {
+        if (_videoHud != null)
+        {
+            return;
+        }
+
+        _videoHud = new UI.VideoHudWindow();
+        WindowThemeHelper.Apply(_videoHud, IsDarkMode);
+        _videoHud.PauseResumeRequested += () =>
+        {
+            if (_videoCaptureService?.IsPaused == true)
+            {
+                ResumeVideoRecording();
+            }
+            else
+            {
+                PauseVideoRecording();
+            }
+        };
+        _videoHud.StopRequested += () => StopVideoRecording();
+    }
+
+    private void OnVideoHudTick(object? sender, EventArgs e)
+    {
+        _log?.Info($"HUD tick: Elapsed={_videoCaptureService?.Elapsed}");
+        UpdateVideoHud();
+    }
+
+    private void UpdateVideoHud()
+    {
+        if (_videoCaptureService == null || _videoHud == null)
+        {
+            return;
+        }
+
+        if (!_videoHud.Dispatcher.CheckAccess())
+        {
+            _videoHud.Dispatcher.BeginInvoke(UpdateVideoHud);
+            return;
+        }
+
+        if (!_videoCaptureService.IsRecording)
+        {
+            _videoHud.Hide();
+            _videoHudTimer?.Stop();
+            return;
+        }
+
+        var elapsed = _videoCaptureService.Elapsed;
+        _log?.Info($"UpdateVideoHud: IsRecording={_videoCaptureService.IsRecording}, Elapsed={elapsed}, IsPaused={_videoCaptureService.IsPaused}");
+        _videoHud.UpdateStatus(_videoCaptureService.IsRecording, _videoCaptureService.IsPaused, _videoCaptureService.IsStopping, elapsed);
     }
 
     private void SaveSettings(AppSettings settings)
@@ -151,7 +482,19 @@ public partial class App : System.Windows.Application
                 CaptureFullscreen();
                 break;
             case HotkeyAction.CopyLast:
-                CopyLastToClipboard();
+                RepeatLastRegion();
+                break;
+            case HotkeyAction.VideoRegion:
+                BeginVideoRegionCapture(_settings?.VideoIncludeAudio == true);
+                break;
+            case HotkeyAction.VideoWindow:
+                StartVideoWindowRecording(_settings?.VideoIncludeAudio == true);
+                break;
+            case HotkeyAction.VideoFullscreen:
+                StartVideoRecording(_settings?.VideoIncludeAudio == true);
+                break;
+            case HotkeyAction.VideoStop:
+                StopVideoRecording();
                 break;
         }
     }
@@ -171,7 +514,37 @@ public partial class App : System.Windows.Application
     private void OnSelectionCompleted(Rectangle rect)
     {
         _isCapturing = false;
+        if (_isVideoSelecting)
+        {
+            _isVideoSelecting = false;
+            StartVideoRegionFromRect(rect, _pendingVideoAudio);
+            return;
+        }
+
         SaveCapture(rect);
+    }
+
+    private void StartVideoRegionFromRect(Rectangle rect, bool includeAudio)
+    {
+        if (_videoCaptureService == null || _sessionManager == null)
+        {
+            return;
+        }
+
+        var screen = Forms.Screen.FromRectangle(rect);
+        var bounds = screen.Bounds;
+        var relativeRect = new Rectangle(rect.Left - bounds.Left, rect.Top - bounds.Top, rect.Width, rect.Height);
+        var sourceRect = new ScreenRecorderLib.ScreenRect(relativeRect.Left, relativeRect.Top, relativeRect.Width, relativeRect.Height);
+        var path = _sessionManager.GetNextFilePath(".mp4");
+        var started = _videoCaptureService.StartRegionRecording(screen.DeviceName, sourceRect, path, includeAudio);
+        if (started)
+        {
+            ShowToast($"Recording started: {System.IO.Path.GetFileName(path)}");
+        }
+        else
+        {
+            ShowToast("Recording failed to start");
+        }
     }
 
     private void CaptureFullscreen()
@@ -216,6 +589,7 @@ public partial class App : System.Windows.Application
 
         try
         {
+            _lastRect = rect;
             using var bmp = _captureService.CaptureRectangle(rect);
             var path = _sessionManager.GetNextFilePath(".png");
             _captureService.SaveBitmap(bmp, path);
@@ -227,6 +601,8 @@ public partial class App : System.Windows.Application
             }
 
             _log?.Info($"Saved: {path}");
+            UpdateBurstHud();
+            _settingsWindow?.RefreshBurstStatus();
             ShowToast($"Saved: {Path.GetFileName(path)}");
         }
         catch (Exception ex)
@@ -289,6 +665,22 @@ public partial class App : System.Windows.Application
         }
     }
 
+    private void RepeatLastRegion()
+    {
+        if (_isCapturing)
+        {
+            return;
+        }
+
+        if (_lastRect == null)
+        {
+            ShowToast("No previous region yet");
+            return;
+        }
+
+        SaveCapture(_lastRect.Value);
+    }
+
     protected override void OnExit(ExitEventArgs e)
     {
         _hotkeyManager?.Dispose();
@@ -297,8 +689,46 @@ public partial class App : System.Windows.Application
             _trayIcon.Visible = false;
             _trayIcon.Dispose();
         }
+        _videoCaptureService?.StopRecording();
         _log?.Info("App exit");
         base.OnExit(e);
+    }
+
+    private void OnVideoRecordingStateChanged(bool isRecording)
+    {
+        Dispatcher.Invoke(UpdateVideoMenuState);
+    }
+
+    private void OnVideoStatusChanged(ScreenRecorderLib.RecorderStatus status)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            if (status == ScreenRecorderLib.RecorderStatus.Idle)
+            {
+                _videoHud?.Hide();
+                _videoHudTimer?.Stop();
+            }
+
+            UpdateVideoHud();
+        });
+    }
+
+    private void UpdateVideoMenuState()
+    {
+        if (_videoCaptureService == null)
+        {
+            return;
+        }
+
+        if (_startVideoItem != null)
+        {
+            _startVideoItem.Enabled = !_videoCaptureService.IsRecording;
+        }
+
+        if (_stopVideoItem != null)
+        {
+            _stopVideoItem.Enabled = _videoCaptureService.IsRecording;
+        }
     }
 
     private static HwndSource CreateHotkeySource()

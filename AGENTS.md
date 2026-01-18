@@ -1,6 +1,8 @@
 # AGENTS.md
 
 ## Project
+
+Always rebuild and restart the app when you finish changes.
 SnipTool är ett Windows‑verktyg för extremt snabb skärmklippning i burst‑flöden. Fokus är 5–30 klipp i följd utan friktion: global hotkey → markera → autosave. Appen är en WPF tray‑app (.NET 8) med en transparent overlay för rektangelmarkering, enklast möjliga settings‑fönster, och automatisk filstruktur/namngivning.
 
 ### Core flow
@@ -11,9 +13,11 @@ SnipTool är ett Windows‑verktyg för extremt snabb skärmklippning i burst‑
 
 ### Current defaults (dev)
 - Save root: `D:\Screenshots`
-- Filnamn: `HHmmss_###.png`
-- Hotkeys: `Ctrl+Shift+1/2/3` för rectangle/window/fullscreen, `Ctrl+Shift+C` för copy last
+- Filnamn: `{date}_{time}_{counter}.png` (legacy `HHmmss_###.png` stöds)
+- Hotkeys: `PrintScreen` (rectangle), `Alt+PrintScreen` (window), `Ctrl+PrintScreen` (fullscreen), `Shift+PrintScreen` (repeat last)
+- Burst default: inaktiv (sparar till root); New burst skapar ny sessionmapp
 - Dotnet path: `D:\dotnet`
+- PrintScreen note: Windows Snipping Tool kan behöva stängas av i Settings → Accessibility → Keyboard
 
 ## Skills
 A skill is a set of local instructions to follow that is stored in a `SKILL.md` file. Below is the list of skills that can be used. Each entry includes a name, description, and file path so you can open the source for full instructions when using a specific skill.

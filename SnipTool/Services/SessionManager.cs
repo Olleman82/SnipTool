@@ -12,11 +12,13 @@ public sealed class SessionManager
     private int _counter;
     private string? _sessionFolder;
     private DateTime _sessionStart;
+    private bool _isActive;
 
     public SessionManager(AppSettings settings)
     {
         _settings = settings;
-        StartNewSession();
+        _sessionStart = DateTime.Now;
+        _isActive = false;
     }
 
     public void StartNewSession()
@@ -25,24 +27,42 @@ public sealed class SessionManager
         _history.Clear();
         _sessionStart = DateTime.Now;
         _sessionFolder = null;
+        _isActive = true;
     }
+
+    public void EndSession()
+    {
+        _counter = 0;
+        _history.Clear();
+        _sessionFolder = null;
+        _isActive = false;
+    }
+
+    public bool IsActive => _isActive;
+
+    public DateTime SessionStart => _sessionStart;
+
+    public string? SessionFolder => _sessionFolder;
+
+    public int Counter => _counter;
 
     public string GetNextFilePath(string extension)
     {
-        EnsureSessionFolder();
-        _counter++;
-
-        var timestamp = DateTime.Now.ToString("HHmmss");
-        var template = _settings.FileNameTemplate;
-        if (!template.Contains("###", StringComparison.Ordinal))
+        if (_isActive)
         {
-            template += "_###";
+            EnsureSessionFolder();
         }
 
-        var fileName = template.Replace("HHmmss", timestamp, StringComparison.Ordinal)
-            .Replace("###", _counter.ToString("D3"), StringComparison.Ordinal);
+        _counter++;
+        var fileName = BuildFileNameTemplate(_settings.FileNameTemplate);
+        var targetFolder = _isActive ? _sessionFolder : _settings.SaveRootPath;
+        if (string.IsNullOrWhiteSpace(targetFolder))
+        {
+            targetFolder = _settings.SaveRootPath;
+        }
 
-        return Path.Combine(_sessionFolder!, fileName + extension);
+        Directory.CreateDirectory(targetFolder);
+        return Path.Combine(targetFolder, fileName + extension);
     }
 
     public void RegisterSavedFile(string path)
@@ -52,7 +72,7 @@ public sealed class SessionManager
 
     public string? GetLastFile() => _history.Count > 0 ? _history.Peek() : null;
 
-    public string? GetLastFolder() => _sessionFolder;
+    public string? GetLastFolder() => _sessionFolder ?? _settings.SaveRootPath;
 
     public bool UndoLast()
     {
@@ -83,9 +103,41 @@ public sealed class SessionManager
             return;
         }
 
+        if (!_isActive)
+        {
+            return;
+        }
+
         var dateFolder = Path.Combine(_settings.SaveRootPath, DateTime.Now.ToString("yyyy-MM-dd"));
         var sessionName = _sessionStart.ToString("HHmmss");
         _sessionFolder = Path.Combine(dateFolder, sessionName);
         Directory.CreateDirectory(_sessionFolder);
+    }
+
+    private string BuildFileNameTemplate(string template)
+    {
+        var timestamp = DateTime.Now.ToString("HHmmss");
+        var date = DateTime.Now.ToString("yyyy-MM-dd");
+        var counter = _counter.ToString("D3");
+
+        if (template.Contains("HHmmss", StringComparison.Ordinal) || template.Contains("###", StringComparison.Ordinal))
+        {
+            if (!template.Contains("###", StringComparison.Ordinal))
+            {
+                template += "_###";
+            }
+
+            return template.Replace("HHmmss", timestamp, StringComparison.Ordinal)
+                .Replace("###", counter, StringComparison.Ordinal);
+        }
+
+        if (!template.Contains("{counter}", StringComparison.Ordinal))
+        {
+            template += "_{counter}";
+        }
+
+        return template.Replace("{date}", date, StringComparison.Ordinal)
+            .Replace("{time}", timestamp, StringComparison.Ordinal)
+            .Replace("{counter}", counter, StringComparison.Ordinal);
     }
 }
