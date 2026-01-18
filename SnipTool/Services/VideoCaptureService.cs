@@ -119,13 +119,26 @@ public sealed class VideoCaptureService
             _recorder.OnStatusChanged += OnStatusChanged;
 
             _currentPath = path;
-            _log?.Info($"Video recording start: {path} (audio={includeAudio})");
-            _recorder.Record(path);
+            _log?.Info($"Video recording start (async): {path} (audio={includeAudio})");
+            
+            _ = Task.Run(() => 
+            {
+                try 
+                {
+                    _recorder.Record(path);
+                    _log?.Info("Internal recorder.Record() called");
+                }
+                catch (Exception ex)
+                {
+                    _log?.Error("Internal recorder.Record() failed", ex);
+                    SafeRaiseFailed(ex.Message);
+                }
+            });
+
             IsRecording = true;
             IsPaused = false;
             _lastStatus = RecorderStatus.Recording;
             _stopwatch.Restart();
-            _log?.Info($"Stopwatch started: IsRunning={_stopwatch.IsRunning}, Elapsed={_stopwatch.Elapsed}");
             SafeRaiseRecordingState(true);
             SafeRaiseStatus(RecorderStatus.Recording);
             return true;
@@ -147,11 +160,23 @@ public sealed class VideoCaptureService
             return;
         }
 
-        _log?.Info("Video recording stop requested");
+        _log?.Info("Video recording stop requested (async)");
         IsStopping = true;
-        _log?.Info("Calling _recorder.Stop()");
-        _recorder.Stop();
-        _log?.Info("_recorder.Stop() returned");
+        
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                _log?.Info("Calling _recorder.Stop() from task");
+                _recorder.Stop();
+                _log?.Info("_recorder.Stop() returned in task");
+            }
+            catch (Exception ex)
+            {
+                _log?.Error("_recorder.Stop() failed in task", ex);
+                CleanupRecorder();
+            }
+        });
 
         var token = Interlocked.Increment(ref _stopToken);
         _ = Task.Run(async () =>
@@ -176,10 +201,21 @@ public sealed class VideoCaptureService
             return;
         }
 
-        _log?.Info("Video recording pause requested");
+        _log?.Info("Video recording pause requested (async)");
         _stopwatch.Stop();
-        _log?.Info($"Stopwatch paused: IsRunning={_stopwatch.IsRunning}, Elapsed={_stopwatch.Elapsed}");
-        _recorder.Pause();
+        IsPaused = true;
+        
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                _recorder.Pause();
+            }
+            catch (Exception ex)
+            {
+                _log?.Error("_recorder.Pause() failed", ex);
+            }
+        });
     }
 
     public void Resume()
@@ -189,10 +225,21 @@ public sealed class VideoCaptureService
             return;
         }
 
-        _log?.Info("Video recording resume requested");
+        _log?.Info("Video recording resume requested (async)");
         _stopwatch.Start();
-        _log?.Info($"Stopwatch resumed: IsRunning={_stopwatch.IsRunning}, Elapsed={_stopwatch.Elapsed}");
-        _recorder.Resume();
+        IsPaused = false;
+        
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                _recorder.Resume();
+            }
+            catch (Exception ex)
+            {
+                _log?.Error("_recorder.Resume() failed", ex);
+            }
+        });
     }
 
     public bool DeleteLastRecording()

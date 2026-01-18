@@ -135,7 +135,7 @@ public partial class VideoCaptureWindow : Window
 
     private void OnRecordingStateChanged(bool isRecording)
     {
-        Dispatcher.Invoke(() =>
+        Dispatcher.BeginInvoke(() =>
         {
             if (!isRecording)
             {
@@ -147,7 +147,7 @@ public partial class VideoCaptureWindow : Window
 
     private void OnRecordingCompleted(string path)
     {
-        Dispatcher.Invoke(() =>
+        Dispatcher.BeginInvoke(() =>
         {
             PathText.Text = string.IsNullOrWhiteSpace(path) ? string.Empty : $"Saved: {path}";
             ResetTimer();
@@ -156,7 +156,7 @@ public partial class VideoCaptureWindow : Window
 
     private void OnRecordingFailed(string error)
     {
-        Dispatcher.Invoke(() =>
+        Dispatcher.BeginInvoke(() =>
         {
             PathText.Text = string.IsNullOrWhiteSpace(error) ? "Recording failed" : error;
             ResetTimer();
@@ -165,7 +165,7 @@ public partial class VideoCaptureWindow : Window
 
     private void OnStatusChanged(ScreenRecorderLib.RecorderStatus status)
     {
-        Dispatcher.Invoke(() =>
+        Dispatcher.BeginInvoke(() =>
         {
             RefreshState();
         });

@@ -29,7 +29,6 @@ public partial class App : System.Windows.Application
     private UI.LibraryWindow? _libraryWindow;
     private UI.VideoCaptureWindow? _videoWindow;
     private UI.VideoHudWindow? _videoHud;
-    private DispatcherTimer? _videoHudTimer;
     private Forms.ToolStripMenuItem? _startVideoItem;
     private Forms.ToolStripMenuItem? _stopVideoItem;
     private bool _isCapturing;
@@ -58,19 +57,19 @@ public partial class App : System.Windows.Application
         _captureService = new CaptureService();
         _videoCaptureService = new VideoCaptureService(_log);
         _videoCaptureService.RecordingStateChanged += isRecording =>
-        Dispatcher.Invoke(() => OnVideoRecordingStateChanged(isRecording));
+            Dispatcher.BeginInvoke(() => OnVideoRecordingStateChanged(isRecording));
         _videoCaptureService.StatusChanged += status =>
-            Dispatcher.Invoke(() => OnVideoStatusChanged(status));
+            Dispatcher.BeginInvoke(() => OnVideoStatusChanged(status));
         _videoCaptureService.RecordingFailed += message =>
-            Dispatcher.Invoke(() => ShowToast($"Recording failed: {message}"));
+            Dispatcher.BeginInvoke(() => ShowToast($"Recording failed: {message}"));
         _videoCaptureService.RecordingCompleted += path =>
-            Dispatcher.Invoke(() =>
+            Dispatcher.BeginInvoke(() =>
             {
                 if (!string.IsNullOrWhiteSpace(path))
                 {
                     ShowToast($"Saved video: {System.IO.Path.GetFileName(path)}");
                     _sessionManager?.RegisterSavedFile(path);
-                    _libraryWindow?.RefreshLibrary();
+                    _libraryWindow?.Dispatcher.BeginInvoke(new Action(() => _libraryWindow.RefreshLibrary()));
                 }
             });
         _overlay = new OverlayWindow();
@@ -378,27 +377,12 @@ public partial class App : System.Windows.Application
     private void StartVideoHud()
     {
         EnsureVideoHud();
-        if (_videoHud == null)
+        if (_videoHud == null || _videoCaptureService == null)
         {
             return;
         }
 
-        // CRITICAL: Must create and start timer on VideoHud's Dispatcher thread
-        _videoHud.Dispatcher.Invoke(() =>
-        {
-            if (_videoHudTimer == null || _videoHudTimer.Dispatcher != _videoHud.Dispatcher)
-            {
-                _videoHudTimer = new DispatcherTimer(DispatcherPriority.Render, _videoHud.Dispatcher)
-                {
-                    Interval = TimeSpan.FromMilliseconds(100)
-                };
-                _videoHudTimer.Tick += OnVideoHudTick;
-            }
-            _log?.Info($"Starting HUD timer: IsEnabled={_videoHudTimer.IsEnabled}");
-            _videoHudTimer.Start();
-            _log?.Info($"HUD timer started: IsEnabled={_videoHudTimer.IsEnabled}");
-        });
-        
+        _videoHud.LinkService(_videoCaptureService);
         UpdateVideoHud();
     }
 
@@ -425,10 +409,9 @@ public partial class App : System.Windows.Application
         _videoHud.StopRequested += () => StopVideoRecording();
     }
 
-    private void OnVideoHudTick(object? sender, EventArgs e)
+    private void HideVideoHud()
     {
-        _log?.Info($"HUD tick: Elapsed={_videoCaptureService?.Elapsed}");
-        UpdateVideoHud();
+        _videoHud?.Dispatcher.BeginInvoke(() => _videoHud.Hide());
     }
 
     private void UpdateVideoHud()
@@ -447,12 +430,10 @@ public partial class App : System.Windows.Application
         if (!_videoCaptureService.IsRecording)
         {
             _videoHud.Hide();
-            _videoHudTimer?.Stop();
             return;
         }
 
         var elapsed = _videoCaptureService.Elapsed;
-        _log?.Info($"UpdateVideoHud: IsRecording={_videoCaptureService.IsRecording}, Elapsed={elapsed}, IsPaused={_videoCaptureService.IsPaused}");
         _videoHud.UpdateStatus(_videoCaptureService.IsRecording, _videoCaptureService.IsPaused, _videoCaptureService.IsStopping, elapsed);
     }
 
@@ -701,12 +682,11 @@ public partial class App : System.Windows.Application
 
     private void OnVideoStatusChanged(ScreenRecorderLib.RecorderStatus status)
     {
-        Dispatcher.Invoke(() =>
+        Dispatcher.BeginInvoke(() =>
         {
             if (status == ScreenRecorderLib.RecorderStatus.Idle)
             {
                 _videoHud?.Hide();
-                _videoHudTimer?.Stop();
             }
 
             UpdateVideoHud();
