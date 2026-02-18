@@ -282,11 +282,16 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        _libraryWindow = new UI.LibraryWindow(_settings)
+        _libraryWindow = new UI.LibraryWindow(_settings);
+        if (_settingsWindow?.IsLoaded == true)
         {
-            Owner = _settingsWindow,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner
-        };
+            _libraryWindow.Owner = _settingsWindow;
+            _libraryWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+        else
+        {
+            _libraryWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        }
         _libraryWindow.Closed += (_, _) => _libraryWindow = null;
         WindowThemeHelper.Apply(_libraryWindow, IsDarkMode);
         _libraryWindow.ShowDialog();
@@ -305,11 +310,16 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        _videoWindow = new UI.VideoCaptureWindow(this, _videoCaptureService)
+        _videoWindow = new UI.VideoCaptureWindow(this, _videoCaptureService);
+        if (_settingsWindow?.IsLoaded == true)
         {
-            Owner = _settingsWindow,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner
-        };
+            _videoWindow.Owner = _settingsWindow;
+            _videoWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+        else
+        {
+            _videoWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        }
         _videoWindow.Closed += (_, _) => _videoWindow = null;
         WindowThemeHelper.Apply(_videoWindow, IsDarkMode);
         _videoWindow.Show();
@@ -414,11 +424,16 @@ public partial class App : System.Windows.Application
 
         if (_videoWindow == null)
         {
-            _videoWindow = new UI.VideoCaptureWindow(this, _videoCaptureService)
+            _videoWindow = new UI.VideoCaptureWindow(this, _videoCaptureService);
+            if (_settingsWindow?.IsLoaded == true)
             {
-                Owner = _settingsWindow,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner
-            };
+                _videoWindow.Owner = _settingsWindow;
+                _videoWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            }
+            else
+            {
+                _videoWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            }
             _videoWindow.Closed += (_, _) => _videoWindow = null;
             WindowThemeHelper.Apply(_videoWindow, IsDarkMode);
             _videoWindow.Show();
