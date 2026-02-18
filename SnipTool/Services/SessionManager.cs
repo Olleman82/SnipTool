@@ -26,7 +26,8 @@ public sealed class SessionManager
         _counter = 0;
         _history.Clear();
         _sessionStart = DateTime.Now;
-        _sessionFolder = null;
+        _sessionFolder = BuildSessionFolder();
+        Directory.CreateDirectory(_sessionFolder);
         _isActive = true;
     }
 
@@ -108,10 +109,15 @@ public sealed class SessionManager
             return;
         }
 
-        var dateFolder = Path.Combine(_settings.SaveRootPath, DateTime.Now.ToString("yyyy-MM-dd"));
-        var sessionName = _sessionStart.ToString("HHmmss");
-        _sessionFolder = Path.Combine(dateFolder, sessionName);
+        _sessionFolder = BuildSessionFolder();
         Directory.CreateDirectory(_sessionFolder);
+    }
+
+    private string BuildSessionFolder()
+    {
+        var dateFolder = Path.Combine(_settings.SaveRootPath, _sessionStart.ToString("yyyy-MM-dd"));
+        var sessionName = _sessionStart.ToString("HHmmss");
+        return Path.Combine(dateFolder, sessionName);
     }
 
     private string BuildFileNameTemplate(string template)

@@ -29,6 +29,7 @@ public partial class App : System.Windows.Application
     private UI.LibraryWindow? _libraryWindow;
     private UI.VideoCaptureWindow? _videoWindow;
     private UI.VideoHudWindow? _videoHud;
+    private UI.WelcomeWindow? _welcomeWindow;
     private Forms.ToolStripMenuItem? _startVideoItem;
     private Forms.ToolStripMenuItem? _stopVideoItem;
     private bool _isCapturing;
@@ -98,6 +99,7 @@ public partial class App : System.Windows.Application
         _settingsWindow.Hide();
 
         SetupTrayIcon();
+        Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(ShowWelcomeIfNeeded));
     }
 
     private void SetupTrayIcon()
@@ -120,6 +122,7 @@ public partial class App : System.Windows.Application
         menu.Items.Add(_startVideoItem);
         menu.Items.Add(_stopVideoItem);
         menu.Items.Add("Video capture...", null, (_, _) => ShowVideoCapture());
+        menu.Items.Add("Quick guide", null, (_, _) => ShowWelcomeGuide(markAsSeen: false));
         menu.Items.Add("Settings", null, (_, _) => ShowSettings());
         menu.Items.Add("Quit", null, (_, _) => Shutdown());
 
@@ -140,6 +143,22 @@ public partial class App : System.Windows.Application
         if (_settingsWindow != null)
         {
             WindowThemeHelper.Apply(_settingsWindow, darkMode);
+        }
+        if (_welcomeWindow != null)
+        {
+            WindowThemeHelper.Apply(_welcomeWindow, darkMode);
+        }
+        if (_libraryWindow != null)
+        {
+            WindowThemeHelper.Apply(_libraryWindow, darkMode);
+        }
+        if (_videoWindow != null)
+        {
+            WindowThemeHelper.Apply(_videoWindow, darkMode);
+        }
+        if (_videoHud != null)
+        {
+            WindowThemeHelper.Apply(_videoHud, darkMode);
         }
     }
 
@@ -210,6 +229,44 @@ public partial class App : System.Windows.Application
         _settingsWindow.Show();
         _settingsWindow.Activate();
         WindowThemeHelper.Apply(_settingsWindow, IsDarkMode);
+    }
+
+    private void ShowWelcomeIfNeeded()
+    {
+        if (_settings?.HasSeenWelcomeSplash == false)
+        {
+            ShowWelcomeGuide(markAsSeen: true);
+        }
+    }
+
+    private void ShowWelcomeGuide(bool markAsSeen)
+    {
+        if (_settings == null)
+        {
+            return;
+        }
+
+        if (_welcomeWindow != null)
+        {
+            _welcomeWindow.Activate();
+            return;
+        }
+
+        _welcomeWindow = new UI.WelcomeWindow(_settings);
+        _welcomeWindow.OpenSettingsRequested += ShowSettings;
+        _welcomeWindow.Closed += (_, _) =>
+        {
+            if (markAsSeen && _settingsService != null && _settings != null && _welcomeWindow?.DoNotShowAgain == true)
+            {
+                _settings.HasSeenWelcomeSplash = true;
+                _settingsService.Save(_settings);
+            }
+
+            _welcomeWindow = null;
+        };
+        _welcomeWindow.Show();
+        WindowThemeHelper.Apply(_welcomeWindow, IsDarkMode);
+        _welcomeWindow.Activate();
     }
 
     public void ShowLibrary()

@@ -10,7 +10,9 @@ internal static class WindowThemeHelper
 {
     private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
     private const int DWMWA_USE_IMMERSIVE_DARK_MODE_OLD = 19;
+    private const int DWMWA_BORDER_COLOR = 34;
     private const int DWMWA_CAPTION_COLOR = 35;
+    private const int DWMWA_TEXT_COLOR = 36;
 
     public static void Apply(Window window, bool darkMode)
     {
@@ -28,7 +30,15 @@ internal static class WindowThemeHelper
         {
             var color = brush.Color;
             var colorRef = color.R | (color.G << 8) | (color.B << 16);
+            DwmSetWindowAttribute(handle, DWMWA_BORDER_COLOR, ref colorRef, sizeof(int));
             DwmSetWindowAttribute(handle, DWMWA_CAPTION_COLOR, ref colorRef, sizeof(int));
+        }
+
+        if (System.Windows.Application.Current?.Resources["AppText"] is SolidColorBrush textBrush)
+        {
+            var textColor = textBrush.Color;
+            var textColorRef = textColor.R | (textColor.G << 8) | (textColor.B << 16);
+            DwmSetWindowAttribute(handle, DWMWA_TEXT_COLOR, ref textColorRef, sizeof(int));
         }
     }
 

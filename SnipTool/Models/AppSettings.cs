@@ -14,6 +14,7 @@ public sealed class AppSettings
     public int ToastDurationMs { get; set; } = 2500;
     public bool UseDarkMode { get; set; } = false;
     public bool VideoIncludeAudio { get; set; } = false;
+    public bool HasSeenWelcomeSplash { get; set; } = false;
     public HotkeySettings Hotkeys { get; set; } = new();
 }
 

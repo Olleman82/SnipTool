@@ -1,0 +1,120 @@
+<Window x:Class="SnipTool.UI.WelcomeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Welcome to SnipTool"
+        Width="700"
+        Height="560"
+        MinWidth="700"
+        MinHeight="560"
+        MaxWidth="700"
+        MaxHeight="560"
+        Background="{DynamicResource AppBackground}"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+    <Grid Margin="20" Background="{DynamicResource AppBackground}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border Style="{StaticResource Card}" Padding="16">
+            <DockPanel LastChildFill="True">
+                <Image Source="pack://application:,,,/Assets/aiolle_logo.png"
+                       Width="44"
+                       Height="44"
+                       Margin="0,0,12,0"
+                       Stretch="Uniform"
+                       DockPanel.Dock="Left" />
+                <StackPanel>
+                    <TextBlock Text="Welcome to SnipTool" FontSize="24" FontWeight="SemiBold" />
+                    <TextBlock Text="Fast capture flow: hotkey -> select -> autosave. Built for burst work with minimal friction."
+                               Margin="0,4,0,0"
+                               Style="{StaticResource MutedText}" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="0,14,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="0.58*" />
+                <ColumnDefinition Width="0.42*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                <Border Style="{StaticResource Card}" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="Core Workflow" Style="{StaticResource SectionHeader}" />
+                        <TextBlock Text="1. Press hotkey" />
+                        <TextBlock Text="2. Select region/window/fullscreen" Margin="0,4,0,0" />
+                        <TextBlock Text="3. Autosave + toast (Undo/Open folder)" Margin="0,4,0,0" />
+                        <TextBlock Text="4. Keep capturing in burst mode" Margin="0,4,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Burst Mode" Style="{StaticResource SectionHeader}" />
+                        <TextBlock Text="All files captured during one burst are stored in the same burst folder." TextWrapping="Wrap" />
+                        <TextBlock Text="Start New burst in tray to create a new folder for the next run." Margin="0,4,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <Border Grid.Column="1" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Hotkeys" Style="{StaticResource SectionHeader}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="Region" Grid.Row="0" />
+                        <TextBlock x:Name="RectHotkeyText" Grid.Row="0" Grid.Column="1" FontWeight="SemiBold" Margin="12,0,0,0" />
+                        <TextBlock Text="Window" Grid.Row="1" Margin="0,4,0,0" />
+                        <TextBlock x:Name="WindowHotkeyText" Grid.Row="1" Grid.Column="1" FontWeight="SemiBold" Margin="12,4,0,0" />
+                        <TextBlock Text="Fullscreen" Grid.Row="2" Margin="0,4,0,0" />
+                        <TextBlock x:Name="FullscreenHotkeyText" Grid.Row="2" Grid.Column="1" FontWeight="SemiBold" Margin="12,4,0,0" />
+                        <TextBlock Text="Repeat" Grid.Row="3" Margin="0,4,0,0" />
+                        <TextBlock x:Name="RepeatHotkeyText" Grid.Row="3" Grid.Column="1" FontWeight="SemiBold" Margin="12,4,0,0" />
+                        <TextBlock Text="Video region" Grid.Row="4" Margin="0,4,0,0" />
+                        <TextBlock x:Name="VideoRegionHotkeyText" Grid.Row="4" Grid.Column="1" FontWeight="SemiBold" Margin="12,4,0,0" />
+                        <TextBlock Text="Video window" Grid.Row="5" Margin="0,4,0,0" />
+                        <TextBlock x:Name="VideoWindowHotkeyText" Grid.Row="5" Grid.Column="1" FontWeight="SemiBold" Margin="12,4,0,0" />
+                        <TextBlock Text="Video fullscreen" Grid.Row="6" Margin="0,4,0,0" />
+                        <TextBlock x:Name="VideoFullscreenHotkeyText" Grid.Row="6" Grid.Column="1" FontWeight="SemiBold" Margin="12,4,0,0" />
+                        <TextBlock Text="Video stop" Grid.Row="7" Margin="0,4,0,0" />
+                        <TextBlock x:Name="VideoStopHotkeyText" Grid.Row="7" Grid.Column="1" FontWeight="SemiBold" Margin="12,4,0,0" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <DockPanel Grid.Row="2" LastChildFill="False">
+            <CheckBox x:Name="DontShowAgainCheckBox"
+                      IsChecked="False"
+                      VerticalAlignment="Center"
+                      Content="Visa inte igen" />
+            <Button x:Name="OpenSettingsButton"
+                    Content="Configure SnipTool"
+                    Margin="10,0,8,0"
+                    Style="{StaticResource SecondaryButton}"
+                    DockPanel.Dock="Right" />
+            <Button x:Name="StartButton"
+                    Content="Continue to Tray"
+                    DockPanel.Dock="Right" />
+        </DockPanel>
+    </Grid>
+</Window>
