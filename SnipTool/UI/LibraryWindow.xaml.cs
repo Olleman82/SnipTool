@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using SnipTool.Models;
 using SnipTool.Services;
 
@@ -54,6 +55,11 @@ public partial class LibraryWindow : Window
         OpenRootButton.Click += (_, _) => OpenFolder(_settings.SaveRootPath);
         CaptureList.MouseDoubleClick += (_, _) => OpenEditorForSelected();
         CaptureList.SelectionChanged += (_, _) => UpdateButtonStates();
+        DeleteButton.Click += (_, _) => DeleteSelected();
+        PreviewKeyDown += (s, e) =>
+        {
+            if (e.Key == Key.Delete) DeleteSelected();
+        };
 
         UpdateButtonStates();
     }
@@ -101,13 +107,46 @@ public partial class LibraryWindow : Window
 
     private void UpdateButtonStates()
     {
-        var hasSelection = CaptureList.SelectedItem is CaptureItem;
-        OpenButton.IsEnabled = hasSelection;
-        EditButton.IsEnabled = hasSelection;
-        ShowInFolderButton.IsEnabled = hasSelection;
+        var hasSelection = CaptureList.SelectedItems.Count > 0;
+        var singleSelection = CaptureList.SelectedItems.Count == 1;
+        
+        OpenButton.IsEnabled = singleSelection;
+        EditButton.IsEnabled = singleSelection;
+        ShowInFolderButton.IsEnabled = singleSelection;
+        DeleteButton.IsEnabled = hasSelection;
     }
 
     private CaptureItem? GetSelectedCapture() => CaptureList.SelectedItem as CaptureItem;
+
+    private void DeleteSelected()
+    {
+        var selected = CaptureList.SelectedItems.Cast<CaptureItem>().ToList();
+        if (selected.Count == 0) return;
+
+        var message = selected.Count == 1 
+            ? $"Are you sure you want to delete '{selected[0].FileName}'?" 
+            : $"Are you sure you want to delete {selected.Count} items?";
+
+        var result = System.Windows.MessageBox.Show(this, message, "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (result != MessageBoxResult.Yes) return;
+
+        foreach (var item in selected)
+        {
+            try
+            {
+                if (File.Exists(item.FilePath))
+                {
+                    File.Delete(item.FilePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Failed to delete {item.FileName}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        RefreshLibrary();
+    }
 
     private void OpenSelected()
     {

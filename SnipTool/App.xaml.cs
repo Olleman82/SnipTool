@@ -48,8 +48,6 @@ public partial class App : System.Windows.Application
         var buildTime = File.GetLastWriteTime(assembly.Location);
         _log.Info($"App starting | {assembly.GetName().Version} | {buildTime:yyyy-MM-dd HH:mm:ss}");
 
-        _settings.SaveRootPath = @"D:\Screenshots";
-        _settingsService.Save(_settings);
         Directory.CreateDirectory(_settings.SaveRootPath);
         ApplyTheme(_settings.UseDarkMode);
 
@@ -584,7 +582,7 @@ public partial class App : System.Windows.Application
             _log?.Info($"Saved: {path}");
             UpdateBurstHud();
             _settingsWindow?.RefreshBurstStatus();
-            ShowToast($"Saved: {Path.GetFileName(path)}");
+            ShowToast($"Saved: {Path.GetFileName(path)}", path, extraDurationMs: 2000);
         }
         catch (Exception ex)
         {
@@ -592,7 +590,7 @@ public partial class App : System.Windows.Application
         }
     }
 
-    private void ShowToast(string message)
+    private void ShowToast(string message, string? editPath = null, int extraDurationMs = 0)
     {
         if (_settings == null)
         {
@@ -600,6 +598,14 @@ public partial class App : System.Windows.Application
         }
 
         var toast = new ToastWindow();
+        toast.EditRequested += () =>
+        {
+            if (!string.IsNullOrWhiteSpace(editPath))
+            {
+                OpenEditor(editPath);
+                toast.Close();
+            }
+        };
         toast.UndoRequested += () =>
         {
             if (_sessionManager?.UndoLast() == true)
@@ -612,7 +618,20 @@ public partial class App : System.Windows.Application
             OpenFolder(_sessionManager?.GetLastFolder());
             toast.Close();
         };
-        toast.ShowToast(message, _settings.ToastDurationMs);
+        toast.ShowToast(message, _settings.ToastDurationMs + extraDurationMs, !string.IsNullOrWhiteSpace(editPath));
+    }
+
+    private void OpenEditor(string filePath)
+    {
+        if (!File.Exists(filePath))
+        {
+            return;
+        }
+
+        var editor = new EditorWindow(filePath);
+        WindowThemeHelper.Apply(editor, IsDarkMode);
+        editor.Show();
+        editor.Activate();
     }
 
     private void OpenFolder(string? folder)

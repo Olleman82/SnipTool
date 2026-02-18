@@ -162,6 +162,7 @@ public sealed class VideoCaptureService
 
         _log?.Info("Video recording stop requested (async)");
         IsStopping = true;
+        _stopwatch.Stop();
         
         _ = Task.Run(() =>
         {
@@ -270,7 +271,7 @@ public sealed class VideoCaptureService
     {
         _log?.Info($"OnRecordingComplete called: FilePath={e.FilePath ?? _currentPath}");
         _completionRaised = true;
-        CleanupRecorder();
+        Task.Run(() => CleanupRecorder());
         var path = e.FilePath ?? _currentPath ?? string.Empty;
         if (!string.IsNullOrWhiteSpace(path))
         {
@@ -284,7 +285,7 @@ public sealed class VideoCaptureService
         var error = e.Error ?? "Recording failed";
         _log?.Error($"Video recording failed: {error}");
         _completionRaised = true;
-        CleanupRecorder();
+        Task.Run(() => CleanupRecorder());
         SafeRaiseFailed(error);
     }
 
@@ -313,7 +314,7 @@ public sealed class VideoCaptureService
             }
             finally
             {
-                CleanupRecorder();
+                Task.Run(() => CleanupRecorder());
             }
         }
     }

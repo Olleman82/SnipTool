@@ -31,7 +31,7 @@ public partial class VideoHudWindow : Window
 
     private void OnRendering(object? sender, EventArgs e)
     {
-        if (_videoService == null || !_isRecording) return;
+        if (_videoService == null || !_isRecording || _isStopping) return;
         
         // Update timer every frame (very efficient in WPF)
         var elapsed = _videoService.Elapsed;

@@ -1,10 +1,13 @@
 using System;
+using System.IO;
 
 namespace SnipTool.Models;
 
 public sealed class AppSettings
 {
-    public string SaveRootPath { get; set; } = @"D:\Screenshots";
+    public string SaveRootPath { get; set; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
+        "SnipTool");
     public string FileNameTemplate { get; set; } = "{date}_{time}_{counter}";
     public bool CopyToClipboardAfterSave { get; set; } = true;
     public bool PlaySoundOnSave { get; set; } = false;

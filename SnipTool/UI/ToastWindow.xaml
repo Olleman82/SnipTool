@@ -16,6 +16,7 @@
         <StackPanel Orientation="Vertical" Margin="4">
             <TextBlock x:Name="MessageText" FontSize="12" TextWrapping="Wrap" />
             <StackPanel Orientation="Horizontal" Margin="0,8,0,0" HorizontalAlignment="Right">
+                <Button x:Name="EditButton" Content="Edit" MinWidth="120" Margin="0,0,8,0" FontWeight="SemiBold" />
                 <Button x:Name="UndoButton" Content="Undo" Margin="0,0,6,0" Style="{StaticResource ToastButton}" />
                 <Button x:Name="OpenButton" Content="Open folder" Style="{StaticResource ToastButton}" />
             </StackPanel>

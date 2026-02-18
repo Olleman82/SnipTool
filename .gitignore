@@ -37,3 +37,11 @@ installer/dist/
 
 # Local tooling
 SnipTool/claude-code-imagegen-skill-main/
+
+# Agent/local instructions
+AGENTS.md
+AGENTS.local.md
+
+# Local override files
+*.local.json
+*.local.ps1

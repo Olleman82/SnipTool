@@ -1,35 +1,51 @@
 # SnipTool
 
-SnipTool is a lightweight Windows tray app for ultra‑fast burst screenshots. The flow is simple: global hotkey → drag a rectangle → auto‑save. It’s optimized for taking 5–30 clips in a row with minimal friction.
+SnipTool is a Windows tray app for fast screenshot bursts: press hotkey, drag a region, and the image is saved immediately.
 
 ## Features
-- Global hotkeys for rectangle, window, and fullscreen capture
-- Burst sessions that group clips into a dated segment folder
-- Auto‑save with fast sequential naming
-- Optional copy‑to‑clipboard after save
-- Toast with quick actions (Undo / Open folder)
-- Light + Dark theme toggle
+- Global hotkeys for region, window, and fullscreen capture
+- Burst/session workflow for 5-30 captures in a row
+- Automatic naming with incrementing counters
+- Optional clipboard copy after save
+- Toast actions (undo last capture, open folder)
+- Built-in screenshot editor and library view
 
-## Defaults (dev)
-- Save root: `D:\Screenshots`
-- Filename template: `HHmmss_###.png`
-- Hotkeys: `Ctrl+Shift+1/2/3` (rectangle/window/fullscreen), `Ctrl+Shift+C` (copy last)
+## Default Hotkeys
+- `PrintScreen`: region capture
+- `Alt+PrintScreen`: active window
+- `Ctrl+PrintScreen`: fullscreen
+- `Shift+PrintScreen`: repeat last region
+- `Ctrl+Shift+R`: start region video recording
+- `Ctrl+Shift+W`: start window video recording
+- `Ctrl+Shift+F`: start fullscreen video recording
+- `Ctrl+Shift+S`: stop video recording
 
-## Build & Run
-Requirements:
-- Windows
-- .NET 8 SDK
+## Requirements
+- Windows 10/11
+- .NET 8 SDK (for local build)
 
-```bash
-D:\dotnet\dotnet.exe build SnipTool\SnipTool.csproj -c Debug
-D:\Appar\snip-tool\SnipTool\bin\Debug\net8.0-windows\SnipTool.exe
+## Build From Source
+```powershell
+dotnet restore .\SnipTool\SnipTool.csproj
+dotnet build .\SnipTool\SnipTool.csproj -c Debug -p:Platform=x64
+dotnet run --project .\SnipTool\SnipTool.csproj -c Debug -p:Platform=x64
 ```
 
-## Project Layout
-- `SnipTool/` – WPF app (.NET 8)
-- `SnipTool/UI/` – overlay and toast windows
-- `SnipTool/Services/` – capture, hotkeys, settings
-- `SnipTool/Models/` – settings model
+## Configuration
+- Default save path is `%USERPROFILE%\Pictures\SnipTool`
+- Settings are managed from the app UI
+- Capture files are stored locally on disk
 
-## License
-TBD
+## Privacy
+- SnipTool stores captures only on the local machine
+- Clipboard copying is optional and controlled via settings
+- No cloud upload is required for core functionality
+
+## Project Layout
+- `SnipTool/`: WPF application
+- `SnipTool/UI/`: windows and overlay UI
+- `SnipTool/Services/`: capture, hotkeys, settings, session logic
+- `SnipTool/Models/`: app settings and models
+
+## Contributing
+Issues and pull requests are welcome.

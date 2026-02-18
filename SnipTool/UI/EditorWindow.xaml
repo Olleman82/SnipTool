@@ -44,6 +44,7 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button x:Name="UndoButton" Content="Undo" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" />
                     <Button x:Name="RedoButton" Content="Redo" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" />
+                    <Button x:Name="CopyButton" Content="Copy" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" />
                     <Button x:Name="SaveButton" Content="Save" Margin="0,0,8,0" />
                     <Button x:Name="SaveCopyButton" Content="Save copy" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" />
                     <Button x:Name="CloseButton" Content="Close" Style="{StaticResource SecondaryButton}" />
@@ -54,6 +55,11 @@
         <Border Grid.Row="1" Style="{StaticResource Card}" Padding="6" Margin="0,12,0,12">
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                 <Grid x:Name="DrawingSurface" Background="Transparent">
+                    <Grid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem x:Name="CopyMenuItem" Header="Copy to clipboard" />
+                        </ContextMenu>
+                    </Grid.ContextMenu>
                     <Image x:Name="BaseImage" Stretch="None" />
                     <Canvas x:Name="ShapeLayer" Background="Transparent" />
                     <InkCanvas x:Name="InkLayer" Background="Transparent" />

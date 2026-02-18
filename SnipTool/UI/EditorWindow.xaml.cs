@@ -150,6 +150,8 @@ public partial class EditorWindow : Window
 
         UndoButton.Click += (_, _) => Undo();
         RedoButton.Click += (_, _) => Redo();
+        CopyButton.Click += (_, _) => CopyToClipboard();
+        CopyMenuItem.Click += (_, _) => CopyToClipboard();
         SaveButton.Click += (_, _) => SaveTo(_filePath);
         SaveCopyButton.Click += (_, _) => SaveTo(GetCopyPath());
         CloseButton.Click += (_, _) => Close();
@@ -262,7 +264,7 @@ public partial class EditorWindow : Window
 
         if (_activeTool == EditorTool.Mask)
         {
-            var rect = CreateBlurRectangle(_startPoint, _startPoint);
+            var rect = CreateBlurRectangle(_startPoint);
             _activeShape = rect;
             ShapeLayer.Children.Add(rect);
         }
@@ -513,7 +515,7 @@ public partial class EditorWindow : Window
         return clone;
     }
 
-    private System.Windows.Shapes.Rectangle CreateBlurRectangle(System.Windows.Point start, System.Windows.Point end)
+    private System.Windows.Shapes.Rectangle CreateBlurRectangle(System.Windows.Point start)
     {
         var rect = new System.Windows.Shapes.Rectangle
         {
@@ -521,11 +523,13 @@ public partial class EditorWindow : Window
             StrokeThickness = 1
         };
 
-        var brush = new VisualBrush(BaseImage)
+        // Capture current state for the blur source
+        var snapshot = CaptureSnapshot();
+        var brush = new ImageBrush(snapshot)
         {
             ViewboxUnits = BrushMappingMode.Absolute,
             ViewportUnits = BrushMappingMode.Absolute,
-            Stretch = Stretch.Fill,
+            Stretch = Stretch.None,
             AlignmentX = AlignmentX.Left,
             AlignmentY = AlignmentY.Top
         };
@@ -536,6 +540,25 @@ public partial class EditorWindow : Window
         return rect;
     }
 
+    private BitmapSource CaptureSnapshot()
+    {
+        var render = new RenderTargetBitmap(
+            (int)_imageWidth,
+            (int)_imageHeight,
+            96,
+            96,
+            PixelFormats.Pbgra32);
+        
+        // Hide the active shape if any (shouldn't be added yet but safe)
+        if (_activeShape != null) _activeShape.Visibility = Visibility.Collapsed;
+        
+        render.Render(DrawingSurface);
+        
+        if (_activeShape != null) _activeShape.Visibility = Visibility.Visible;
+        
+        return render;
+    }
+
     private static void UpdateBlurRectangle(System.Windows.Shapes.Rectangle rect, double x, double y, double width, double height)
     {
         Canvas.SetLeft(rect, x);
@@ -543,18 +566,45 @@ public partial class EditorWindow : Window
         rect.Width = width;
         rect.Height = height;
 
-        if (rect.Fill is VisualBrush brush)
+        if (rect.Fill is ImageBrush brush)
         {
             brush.Viewbox = new Rect(x, y, Math.Max(1, width), Math.Max(1, height));
-            brush.Viewport = new Rect(x, y, Math.Max(1, width), Math.Max(1, height));
+            brush.Viewport = new Rect(0, 0, Math.Max(1, width), Math.Max(1, height));
         }
     }
 
     private void SaveTo(string path)
     {
-        if (_imageWidth <= 0 || _imageHeight <= 0)
+        var render = RenderDrawingSurface();
+        if (render == null)
         {
             return;
+        }
+
+        BitmapEncoder encoder = CreateEncoder(path);
+        encoder.Frames.Add(BitmapFrame.Create(render));
+
+        using var stream = new FileStream(path, FileMode.Create, FileAccess.Write);
+        encoder.Save(stream);
+    }
+
+    private void CopyToClipboard()
+    {
+        var render = RenderDrawingSurface();
+        if (render == null)
+        {
+            return;
+        }
+
+        render.Freeze();
+        System.Windows.Clipboard.SetImage(render);
+    }
+
+    private BitmapSource? RenderDrawingSurface()
+    {
+        if (_imageWidth <= 0 || _imageHeight <= 0)
+        {
+            return null;
         }
 
         DrawingSurface.Measure(new System.Windows.Size(_imageWidth, _imageHeight));
@@ -568,12 +618,7 @@ public partial class EditorWindow : Window
             96,
             PixelFormats.Pbgra32);
         render.Render(DrawingSurface);
-
-        BitmapEncoder encoder = CreateEncoder(path);
-        encoder.Frames.Add(BitmapFrame.Create(render));
-
-        using var stream = new FileStream(path, FileMode.Create, FileAccess.Write);
-        encoder.Save(stream);
+        return render;
     }
 
     private static BitmapEncoder CreateEncoder(string path)

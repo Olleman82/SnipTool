@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Video capture"
         Width="520"
-        Height="320"
+        Height="368"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource AppBackground}">
     <Grid Margin="16">

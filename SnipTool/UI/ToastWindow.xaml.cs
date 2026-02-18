@@ -10,18 +10,21 @@ public partial class ToastWindow : Window
 
     public event Action? UndoRequested;
     public event Action? OpenFolderRequested;
+    public event Action? EditRequested;
 
     public ToastWindow()
     {
         InitializeComponent();
+        EditButton.Click += (_, _) => EditRequested?.Invoke();
         UndoButton.Click += (_, _) => UndoRequested?.Invoke();
         OpenButton.Click += (_, _) => OpenFolderRequested?.Invoke();
         _timer.Tick += (_, _) => Close();
     }
 
-    public void ShowToast(string message, int durationMs)
+    public void ShowToast(string message, int durationMs, bool showEdit)
     {
         MessageText.Text = message;
+        EditButton.Visibility = showEdit ? Visibility.Visible : Visibility.Collapsed;
         _timer.Interval = TimeSpan.FromMilliseconds(durationMs);
         _timer.Start();
         Show();
